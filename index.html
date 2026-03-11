@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Pong Game</title>
+
+<style>
+body{
+font-family:Arial;
+text-align:center;
+background:#111;
+color:white;
+}
+
+canvas{
+background:black;
+margin-top:20px;
+border:2px solid white;
+touch-action:none;
+}
+
+button,select{
+margin:5px;
+padding:10px;
+font-size:16px;
+}
+
+#leaderboard{
+margin-top:20px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Pong</h1>
+
+<select id="mode">
+<option value="bot">Gegen Bot</option>
+<option value="two">2 Spieler</option>
+</select>
+
+<select id="difficulty">
+<option value="2">Leicht</option>
+<option value="4">Mittel</option>
+<option value="6">Schwer</option>
+</select>
+
+<button onclick="startGame()">Start</button>
+
+<p id="timer">Zeit: 0</p>
+
+<canvas id="game" width="800" height="400"></canvas>
+
+<h2>Anleitung</h2>
+
+<p>
+Spieler 1: Pfeiltasten ↑ ↓ oder Touch<br>
+Spieler 2: W und S<br>
+Ziel: 10 Punkte erreichen
+</p>
+
+<div id="leaderboard">
+<h2>Bestenliste</h2>
+<ol id="scores"></ol>
+</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let paddleHeight = 80;
+let paddleWidth = 10;
+
+let player1 = {x:10,y:160,score:0};
+let player2 = {x:780,y:160,score:0};
+
+let ball = {x:400,y:200,vx:4,vy:4};
+
+let timer=0;
+let timerInterval;
+
+let mode="bot";
+let difficulty=4;
+
+function startGame(){
+
+mode=document.getElementById("mode").value;
+difficulty=parseInt(document.getElementById("difficulty").value);
+
+player1.score=0;
+player2.score=0;
+timer=0;
+
+clearInterval(timerInterval);
+timerInterval=setInterval(()=>{
+timer++;
+document.getElementById("timer").innerText="Zeit: "+timer;
+},1000);
+
+requestAnimationFrame(loop);
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,800,400);
+
+ctx.fillStyle="white";
+
+ctx.fillRect(player1.x,player1.y,paddleWidth,paddleHeight);
+ctx.fillRect(player2.x,player2.y,paddleWidth,paddleHeight);
+
+ctx.beginPath();
+ctx.arc(ball.x,ball.y,8,0,Math.PI*2);
+ctx.fill();
+
+ctx.fillText(player1.score,350,30);
+ctx.fillText(player2.score,450,30);
+
+}
+
+function moveBall(){
+
+ball.x+=ball.vx;
+ball.y+=ball.vy;
+
+if(ball.y<0||ball.y>400) ball.vy*=-1;
+
+if(ball.x<20 && ball.y>player1.y && ball.y<player1.y+paddleHeight)
+ball.vx*=-1;
+
+if(ball.x>780 && ball.y>player2.y && ball.y<player2.y+paddleHeight)
+ball.vx*=-1;
+
+if(ball.x<0){
+player2.score++;
+resetBall();
+}
+
+if(ball.x>800){
+player1.score++;
+resetBall();
+}
+
+if(player1.score>=10 || player2.score>=10){
+endGame();
+}
+
+}
+
+function resetBall(){
+
+ball.x=400;
+ball.y=200;
+ball.vx*=-1;
+
+}
+
+function botMove(){
+
+let center=player2.y+paddleHeight/2;
+
+if(center<ball.y) player2.y+=difficulty;
+else player2.y-=difficulty;
+
+}
+
+function loop(){
+
+moveBall();
+
+if(mode==="bot") botMove();
+
+draw();
+
+requestAnimationFrame(loop);
+
+}
+
+document.addEventListener("keydown",(e)=>{
+
+if(e.key==="ArrowUp") player1.y-=20;
+if(e.key==="ArrowDown") player1.y+=20;
+
+if(e.key==="w") player2.y-=20;
+if(e.key==="s") player2.y+=20;
+
+});
+
+canvas.addEventListener("touchmove",(e)=>{
+
+let rect=canvas.getBoundingClientRect();
+let touch=e.touches[0].clientY-rect.top;
+
+player1.y=touch-paddleHeight/2;
+
+});
+
+function endGame(){
+
+clearInterval(timerInterval);
+
+let name=prompt("Name für Bestenliste");
+
+let entry={name:name,time:timer};
+
+let scores=JSON.parse(localStorage.getItem("pongScores")||"[]");
+
+scores.push(entry);
+
+scores.sort((a,b)=>a.time-b.time);
+
+scores=scores.slice(0,10);
+
+localStorage.setItem("pongScores",JSON.stringify(scores));
+
+showScores();
+
+}
+
+function showScores(){
+
+let scores=JSON.parse(localStorage.getItem("pongScores")||"[]");
+
+let list=document.getElementById("scores");
+
+list.innerHTML="";
+
+scores.forEach(s=>{
+
+let li=document.createElement("li");
+
+li.innerText=s.name+" - "+s.time+"s";
+
+list.appendChild(li);
+
+});
+
+}
+
+showScores();
+
+</script>
+
+</body>
+</html>
